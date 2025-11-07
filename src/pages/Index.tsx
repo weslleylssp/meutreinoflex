@@ -11,6 +11,7 @@ interface Exercise {
   sets: number;
   reps: number;
   weight: number;
+  gifUrl?: string;
 }
 
 interface Workout {

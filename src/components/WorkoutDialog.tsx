@@ -1,10 +1,24 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Search } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 interface Exercise {
   id: string;
@@ -12,6 +26,7 @@ interface Exercise {
   sets: number;
   reps: number;
   weight: number;
+  gifUrl?: string;
 }
 
 interface Workout {
@@ -30,6 +45,19 @@ interface WorkoutDialogProps {
 export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDialogProps) => {
   const [name, setName] = useState(workout?.name || "");
   const [exercises, setExercises] = useState<Exercise[]>(workout?.exercises || []);
+  const [searchOpen, setSearchOpen] = useState<string | null>(null);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searching, setSearching] = useState(false);
+
+  useEffect(() => {
+    if (workout) {
+      setName(workout.name);
+      setExercises(workout.exercises);
+    } else {
+      setName("");
+      setExercises([]);
+    }
+  }, [workout, open]);
 
   const addExercise = () => {
     setExercises([
@@ -40,6 +68,7 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
         sets: 3,
         reps: 10,
         weight: 0,
+        gifUrl: undefined,
       },
     ]);
   };
@@ -54,6 +83,40 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
         ex.id === id ? { ...ex, [field]: value } : ex
       )
     );
+  };
+
+  const searchExercises = async (searchTerm: string) => {
+    if (!searchTerm || searchTerm.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+
+    setSearching(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('search-exercises', {
+        body: { searchTerm }
+      });
+
+      if (error) throw error;
+      setSearchResults(data.exercises || []);
+    } catch (error) {
+      console.error('Error searching exercises:', error);
+      toast.error("Erro ao buscar exercícios");
+      setSearchResults([]);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const selectExercise = (exerciseId: string, apiExercise: any) => {
+    const updatedExercises = exercises.map((ex) =>
+      ex.id === exerciseId
+        ? { ...ex, name: apiExercise.name, gifUrl: apiExercise.gifUrl }
+        : ex
+    );
+    setExercises(updatedExercises);
+    setSearchOpen(null);
+    setSearchResults([]);
   };
 
   const handleSave = () => {
@@ -128,14 +191,67 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
                 <div className="grid gap-3">
                   <div>
                     <Label htmlFor={`exercise-name-${exercise.id}`}>Nome</Label>
-                    <Input
-                      id={`exercise-name-${exercise.id}`}
-                      placeholder="Ex: Supino Reto"
-                      value={exercise.name}
-                      onChange={(e) =>
-                        updateExercise(exercise.id, "name", e.target.value)
-                      }
-                    />
+                    <div className="flex gap-2">
+                      <Input
+                        id={`exercise-name-${exercise.id}`}
+                        placeholder="Ex: Supino Reto"
+                        value={exercise.name}
+                        onChange={(e) =>
+                          updateExercise(exercise.id, "name", e.target.value)
+                        }
+                      />
+                      <Popover open={searchOpen === exercise.id} onOpenChange={(open) => setSearchOpen(open ? exercise.id : null)}>
+                        <PopoverTrigger asChild>
+                          <Button type="button" variant="outline" size="icon">
+                            <Search className="h-4 w-4" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[300px] p-0" align="start">
+                          <Command>
+                            <CommandInput 
+                              placeholder="Buscar exercício..." 
+                              onValueChange={(value) => searchExercises(value)}
+                            />
+                            <CommandList>
+                              <CommandEmpty>
+                                {searching ? "Buscando..." : "Nenhum exercício encontrado."}
+                              </CommandEmpty>
+                              <CommandGroup>
+                                {searchResults.map((result) => (
+                                  <CommandItem
+                                    key={result.id}
+                                    value={result.name}
+                                    onSelect={() => selectExercise(exercise.id, result)}
+                                    className="flex items-center gap-2"
+                                  >
+                                    {result.gifUrl && (
+                                      <img 
+                                        src={result.gifUrl} 
+                                        alt={result.name}
+                                        className="w-12 h-12 object-cover rounded"
+                                      />
+                                    )}
+                                    <div className="flex-1">
+                                      <p className="text-sm font-medium">{result.name}</p>
+                                      <p className="text-xs text-muted-foreground capitalize">{result.target}</p>
+                                    </div>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                    {exercise.gifUrl && (
+                      <div className="mt-2">
+                        <img 
+                          src={exercise.gifUrl} 
+                          alt={exercise.name}
+                          className="w-32 h-32 object-cover rounded-lg border"
+                        />
+                      </div>
+                    )}
                   </div>
                   <div className="grid grid-cols-3 gap-3">
                     <div>

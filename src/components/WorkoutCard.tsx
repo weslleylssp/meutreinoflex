@@ -8,6 +8,7 @@ interface Exercise {
   sets: number;
   reps: number;
   weight: number;
+  gifUrl?: string;
 }
 
 interface WorkoutCardProps {
@@ -45,11 +46,24 @@ export const WorkoutCard = ({ name, exercises, onEdit, onDelete }: WorkoutCardPr
       <CardContent>
         <div className="space-y-3">
           {exercises.slice(0, 3).map((exercise) => (
-            <div key={exercise.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
-              <span className="font-medium text-sm">{exercise.name}</span>
-              <span className="text-xs text-muted-foreground">
-                {exercise.sets}x{exercise.reps} • {exercise.weight}kg
-              </span>
+            <div key={exercise.id} className="flex items-start gap-3 p-3 rounded-lg bg-secondary/50">
+              {exercise.gifUrl ? (
+                <img 
+                  src={exercise.gifUrl} 
+                  alt={exercise.name}
+                  className="w-16 h-16 object-cover rounded-lg"
+                />
+              ) : (
+                <div className="p-2 rounded-lg bg-accent w-16 h-16 flex items-center justify-center">
+                  <Dumbbell className="h-6 w-6 text-accent-foreground" />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-sm truncate">{exercise.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {exercise.sets}x{exercise.reps} • {exercise.weight}kg
+                </p>
+              </div>
             </div>
           ))}
           {exercises.length > 3 && (
