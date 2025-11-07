@@ -26,7 +26,20 @@ serve(async (req) => {
     );
 
     if (!response.ok) {
-      throw new Error(`API returned ${response.status}`);
+      const errorMsg = `API returned ${response.status}`;
+      console.error('API Error:', errorMsg);
+      
+      if (response.status === 429) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Rate limit exceeded. Please try again in a moment.',
+            exercises: []
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        );
+      }
+      
+      throw new Error(errorMsg);
     }
 
     const exercises = await response.json();

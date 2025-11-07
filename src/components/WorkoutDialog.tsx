@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,6 +48,7 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
   const [searchOpen, setSearchOpen] = useState<string | null>(null);
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     if (workout) {
@@ -58,6 +59,18 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
       setExercises([]);
     }
   }, [workout, open]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchTerm && searchTerm.length >= 2) {
+        searchExercises(searchTerm);
+      } else {
+        setSearchResults([]);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   const addExercise = () => {
     setExercises([
@@ -85,8 +98,8 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
     );
   };
 
-  const searchExercises = async (searchTerm: string) => {
-    if (!searchTerm || searchTerm.length < 2) {
+  const searchExercises = useCallback(async (term: string) => {
+    if (!term || term.length < 2) {
       setSearchResults([]);
       return;
     }
@@ -94,10 +107,21 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
     setSearching(true);
     try {
       const { data, error } = await supabase.functions.invoke('search-exercises', {
-        body: { searchTerm }
+        body: { searchTerm: term }
       });
 
       if (error) throw error;
+      
+      if (data.error) {
+        if (data.error.includes('429')) {
+          toast.error("Limite de requisições atingido. Aguarde um momento.");
+        } else {
+          toast.error("Erro ao buscar exercícios");
+        }
+        setSearchResults([]);
+        return;
+      }
+      
       setSearchResults(data.exercises || []);
     } catch (error) {
       console.error('Error searching exercises:', error);
@@ -106,7 +130,7 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
     } finally {
       setSearching(false);
     }
-  };
+  }, []);
 
   const selectExercise = (exerciseId: string, apiExercise: any) => {
     const updatedExercises = exercises.map((ex) =>
@@ -210,7 +234,7 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
                           <Command>
                             <CommandInput 
                               placeholder="Buscar exercício..." 
-                              onValueChange={(value) => searchExercises(value)}
+                              onValueChange={(value) => setSearchTerm(value)}
                             />
                             <CommandList>
                               <CommandEmpty>
