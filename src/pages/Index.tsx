@@ -1,6 +1,7 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Plus, Dumbbell } from "lucide-react";
+import { Plus, Dumbbell, TrendingUp } from "lucide-react";
 import { WorkoutCard } from "@/components/WorkoutCard";
 import { WorkoutDialog } from "@/components/WorkoutDialog";
 import { toast } from "sonner";
@@ -21,6 +22,7 @@ interface Workout {
 }
 
 const Index = () => {
+  const navigate = useNavigate();
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingWorkout, setEditingWorkout] = useState<Workout | undefined>();
@@ -52,18 +54,30 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
-        <header className="mb-12 text-center">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <div className="p-3 rounded-2xl bg-gradient-primary">
-              <Dumbbell className="h-8 w-8 text-primary-foreground" />
+        <header className="mb-12">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-2xl bg-gradient-primary">
+                <Dumbbell className="h-8 w-8 text-primary-foreground" />
+              </div>
+              <div>
+                <h1 className="text-4xl md:text-5xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+                  FitPlan
+                </h1>
+                <p className="text-muted-foreground">
+                  Organize seus treinos e acompanhe seu progresso
+                </p>
+              </div>
             </div>
-            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              FitPlan
-            </h1>
+            <Button
+              onClick={() => navigate("/history")}
+              variant="outline"
+              className="gap-2"
+            >
+              <TrendingUp className="h-5 w-5" />
+              Histórico
+            </Button>
           </div>
-          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Organize seus treinos, acompanhe seu progresso e alcance seus objetivos
-          </p>
         </header>
 
         <div className="mb-8 flex justify-between items-center">

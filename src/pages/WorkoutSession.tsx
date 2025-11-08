@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, Timer, Trophy } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Exercise {
   id: string;
@@ -80,12 +81,46 @@ const WorkoutSession = () => {
     return Object.values(completedSets).flat().filter(Boolean).length;
   };
 
-  const handleFinishWorkout = () => {
+  const handleFinishWorkout = async () => {
     const total = getTotalSets();
     const completed = getCompletedSetsCount();
     
-    toast.success(`Treino finalizado! ${completed}/${total} séries completadas em ${formatTime(elapsedTime)}`);
-    navigate("/");
+    // Calculate total weight lifted
+    const totalWeight = workout.exercises.reduce((sum, exercise) => {
+      const completedExerciseSets = completedSets[exercise.id]?.filter(Boolean).length || 0;
+      return sum + (exercise.weight * exercise.reps * completedExerciseSets);
+    }, 0);
+
+    // Prepare exercise details
+    const exerciseDetails = workout.exercises.map((exercise) => ({
+      name: exercise.name,
+      sets: exercise.sets,
+      reps: exercise.reps,
+      weight: exercise.weight,
+      completedSets: completedSets[exercise.id]?.filter(Boolean).length || 0,
+    }));
+
+    try {
+      const { error } = await supabase
+        .from('workout_history')
+        .insert({
+          workout_name: workout.name,
+          duration: elapsedTime,
+          total_weight: totalWeight,
+          muscle_groups: ['Geral'], // Can be enhanced later with specific muscle groups
+          total_sets: total,
+          completed_sets: completed,
+          exercises: exerciseDetails,
+        });
+
+      if (error) throw error;
+
+      toast.success(`Treino finalizado! ${completed}/${total} séries completadas em ${formatTime(elapsedTime)}`);
+      navigate("/history");
+    } catch (error) {
+      console.error('Error saving workout:', error);
+      toast.error("Erro ao salvar treino");
+    }
   };
 
   return (
