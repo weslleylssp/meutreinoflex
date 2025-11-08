@@ -87,10 +87,12 @@ const Index = () => {
               {workouts.length} {workouts.length === 1 ? "treino" : "treinos"} cadastrados
             </p>
           </div>
-          <Button onClick={handleNewWorkout} className="bg-gradient-primary shadow-elevated">
-            <Plus className="h-5 w-5 mr-2" />
-            Novo Treino
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={handleNewWorkout} className="bg-gradient-primary shadow-elevated">
+              <Plus className="h-5 w-5 mr-2" />
+              Novo Treino
+            </Button>
+          </div>
         </div>
 
         {workouts.length === 0 ? (
