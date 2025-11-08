@@ -1,6 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Dumbbell, Edit, Trash2 } from "lucide-react";
+import { Dumbbell, Edit, Trash2, Play } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface Exercise {
   id: string;
@@ -19,7 +20,12 @@ interface WorkoutCardProps {
   onDelete: () => void;
 }
 
-export const WorkoutCard = ({ name, exercises, onEdit, onDelete }: WorkoutCardProps) => {
+export const WorkoutCard = ({ id, name, exercises, onEdit, onDelete }: WorkoutCardProps) => {
+  const navigate = useNavigate();
+
+  const handleStartWorkout = () => {
+    navigate(`/workout/${id}`, { state: { workout: { id, name, exercises } } });
+  };
   return (
     <Card className="shadow-card hover:shadow-elevated transition-all duration-300 bg-gradient-card border-border">
       <CardHeader>
@@ -72,6 +78,13 @@ export const WorkoutCard = ({ name, exercises, onEdit, onDelete }: WorkoutCardPr
             </p>
           )}
         </div>
+        <Button 
+          onClick={handleStartWorkout}
+          className="w-full mt-4 bg-gradient-primary shadow-elevated"
+        >
+          <Play className="h-4 w-4 mr-2" />
+          Iniciar Treino
+        </Button>
       </CardContent>
     </Card>
   );
