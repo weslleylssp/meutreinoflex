@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import {
   Command,
   CommandEmpty,
@@ -18,7 +17,11 @@ import {
   PopoverContent,
 } from "@/components/ui/popover";
 
-// Cache para resultados de busca
+// ✅ Chave e host da API
+const API_HOST = "exercisedb.p.rapidapi.com";
+const API_KEY = "d85919843bmshfe501f29e8916c9p1b869fjsn379c9978ea3b";
+
+// Cache local em memória
 const searchCache = new Map<string, any[]>();
 
 interface Exercise {
@@ -61,7 +64,6 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
     }
   }, [workout, open]);
 
-
   const addExercise = () => {
     setExercises([
       ...exercises,
@@ -87,18 +89,12 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
       )
     );
     
-    // Se estiver atualizando o nome, fazer busca com debounce
+    // Se estiver atualizando o nome, faz busca com debounce
     if (field === "name" && typeof value === "string") {
       setActiveExerciseId(id);
-      
-      // Limpar timer anterior
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-      
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
       if (value.length >= 2) {
         setSearching(true);
-        // Debounce de 700ms
         debounceTimerRef.current = setTimeout(() => {
           searchExercises(value);
         }, 700);
@@ -109,6 +105,7 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
     }
   };
 
+  // ✅ Nova função de busca direto na RapidAPI
   const searchExercises = useCallback(async (term: string) => {
     if (!term || term.length < 2) {
       setSearchResults([]);
@@ -117,8 +114,6 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
     }
 
     const normalizedTerm = term.toLowerCase().trim();
-    
-    // Verificar cache primeiro
     if (searchCache.has(normalizedTerm)) {
       setSearchResults(searchCache.get(normalizedTerm) || []);
       setSearching(false);
@@ -126,29 +121,30 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
     }
 
     try {
-      const { data, error } = await supabase.functions.invoke('search-exercises', {
-        body: { searchTerm: term }
+      const res = await fetch(`https://${API_HOST}/exercises/name/${encodeURIComponent(term)}`, {
+        headers: {
+          "x-rapidapi-host": API_HOST,
+          "x-rapidapi-key": API_KEY,
+        },
       });
 
-      if (error) throw error;
-      
-      if (data.error) {
-        if (data.error.includes('429')) {
+      if (!res.ok) {
+        if (res.status === 429) {
           toast.error("Limite de requisições atingido. Aguarde um momento.");
         } else {
-          toast.error("Erro ao buscar exercícios");
+          toast.error("Erro ao buscar exercícios.");
         }
         setSearchResults([]);
-        setSearching(false);
         return;
       }
-      
-      const results = data.exercises || [];
-      // Armazenar no cache
+
+      const data = await res.json();
+      const results = Array.isArray(data) ? data : [];
       searchCache.set(normalizedTerm, results);
       setSearchResults(results);
     } catch (error) {
-      toast.error("Erro ao buscar exercícios");
+      toast.error("Erro de conexão com a API de exercícios.");
+      console.error(error);
       setSearchResults([]);
     } finally {
       setSearching(false);
@@ -158,7 +154,14 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
   const selectExercise = (exerciseId: string, apiExercise: any) => {
     const updatedExercises = exercises.map((ex) =>
       ex.id === exerciseId
-        ? { ...ex, name: apiExercise.name, gifUrl: apiExercise.gifUrl }
+        ? { 
+            ...ex, 
+            name: apiExercise.name, 
+            gifUrl: apiExercise.gifUrl,
+            weight: ex.weight || 0,
+            sets: ex.sets || 3,
+            reps: ex.reps || 10
+          }
         : ex
     );
     setExercises(updatedExercises);
@@ -185,7 +188,7 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
       name,
       exercises,
     });
-    
+
     setName("");
     setExercises([]);
     onOpenChange(false);
@@ -235,6 +238,7 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
+
                 <div className="grid gap-3">
                   <div className="relative">
                     <Label htmlFor={`exercise-name-${exercise.id}`}>Nome</Label>
@@ -252,10 +256,7 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
                             searchExercises(exercise.name);
                           }
                         }}
-                        onBlur={() => {
-                          // Delay para permitir o clique nos resultados
-                          setTimeout(() => setActiveExerciseId(null), 200);
-                        }}
+                        onBlur={() => setTimeout(() => setActiveExerciseId(null), 200)}
                         className="pr-10"
                       />
                       {searching && activeExerciseId === exercise.id && (
@@ -264,6 +265,7 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
                         </div>
                       )}
                     </div>
+
                     {activeExerciseId === exercise.id && searchResults.length > 0 && (
                       <Popover open={true}>
                         <PopoverContent 
@@ -303,6 +305,7 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
                         </PopoverContent>
                       </Popover>
                     )}
+
                     {exercise.gifUrl && (
                       <div className="mt-2">
                         <img 
@@ -313,6 +316,7 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
                       </div>
                     )}
                   </div>
+
                   <div className="grid grid-cols-3 gap-3">
                     <div>
                       <Label htmlFor={`exercise-sets-${exercise.id}`}>Séries</Label>
