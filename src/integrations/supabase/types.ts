@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      exercises: {
+        Row: {
+          body_part: string
+          created_at: string | null
+          equipment: string
+          gif_url: string
+          id: string
+          instructions: string[] | null
+          name: string
+          secondary_muscles: string[] | null
+          target: string
+        }
+        Insert: {
+          body_part: string
+          created_at?: string | null
+          equipment: string
+          gif_url: string
+          id: string
+          instructions?: string[] | null
+          name: string
+          secondary_muscles?: string[] | null
+          target: string
+        }
+        Update: {
+          body_part?: string
+          created_at?: string | null
+          equipment?: string
+          gif_url?: string
+          id?: string
+          instructions?: string[] | null
+          name?: string
+          secondary_muscles?: string[] | null
+          target?: string
+        }
+        Relationships: []
+      }
       shared_workouts: {
         Row: {
           access_count: number

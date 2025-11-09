@@ -261,9 +261,11 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
   for (const ex of validation.data.exercises) {
     if (!ex.gifUrl && ex.name) {
       try {
-        const results = await searchExercises(ex.name);
-        if (results && results.length > 0) {
-          ex.gifUrl = results[0].gifUrl;
+        const { data } = await supabase.functions.invoke('search-exercises', {
+          body: { searchTerm: ex.name }
+        });
+        if (data?.exercises && data.exercises.length > 0) {
+          ex.gifUrl = data.exercises[0].gifUrl;
         }
       } catch (e) {
         console.warn(`Erro ao buscar GIF para ${ex.name}:`, e);
