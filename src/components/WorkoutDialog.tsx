@@ -3,21 +3,19 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, X, Search } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Command,
   CommandEmpty,
   CommandGroup,
-  CommandInput,
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
 import {
   Popover,
   PopoverContent,
-  PopoverTrigger,
 } from "@/components/ui/popover";
 
 interface Exercise {
@@ -45,10 +43,9 @@ interface WorkoutDialogProps {
 export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDialogProps) => {
   const [name, setName] = useState(workout?.name || "");
   const [exercises, setExercises] = useState<Exercise[]>(workout?.exercises || []);
-  const [searchOpen, setSearchOpen] = useState<string | null>(null);
+  const [activeExerciseId, setActiveExerciseId] = useState<string | null>(null);
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     if (workout) {
@@ -60,17 +57,6 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
     }
   }, [workout, open]);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchTerm && searchTerm.length >= 2) {
-        searchExercises(searchTerm);
-      } else {
-        setSearchResults([]);
-      }
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
 
   const addExercise = () => {
     setExercises([
@@ -96,6 +82,16 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
         ex.id === id ? { ...ex, [field]: value } : ex
       )
     );
+    
+    // Se estiver atualizando o nome, fazer busca automática
+    if (field === "name" && typeof value === "string") {
+      setActiveExerciseId(id);
+      if (value.length >= 2) {
+        searchExercises(value);
+      } else {
+        setSearchResults([]);
+      }
+    }
   };
 
   const searchExercises = useCallback(async (term: string) => {
@@ -139,7 +135,7 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
         : ex
     );
     setExercises(updatedExercises);
-    setSearchOpen(null);
+    setActiveExerciseId(null);
     setSearchResults([]);
   };
 
@@ -213,29 +209,34 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
                   </Button>
                 </div>
                 <div className="grid gap-3">
-                  <div>
+                  <div className="relative">
                     <Label htmlFor={`exercise-name-${exercise.id}`}>Nome</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id={`exercise-name-${exercise.id}`}
-                        placeholder="Ex: Supino Reto"
-                        value={exercise.name}
-                        onChange={(e) =>
-                          updateExercise(exercise.id, "name", e.target.value)
+                    <Input
+                      id={`exercise-name-${exercise.id}`}
+                      placeholder="Digite para buscar exercícios..."
+                      value={exercise.name}
+                      onChange={(e) =>
+                        updateExercise(exercise.id, "name", e.target.value)
+                      }
+                      onFocus={() => {
+                        if (exercise.name.length >= 2) {
+                          setActiveExerciseId(exercise.id);
+                          searchExercises(exercise.name);
                         }
-                      />
-                      <Popover open={searchOpen === exercise.id} onOpenChange={(open) => setSearchOpen(open ? exercise.id : null)}>
-                        <PopoverTrigger asChild>
-                          <Button type="button" variant="outline" size="icon">
-                            <Search className="h-4 w-4" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[300px] p-0" align="start">
+                      }}
+                      onBlur={() => {
+                        // Delay para permitir o clique nos resultados
+                        setTimeout(() => setActiveExerciseId(null), 200);
+                      }}
+                    />
+                    {activeExerciseId === exercise.id && searchResults.length > 0 && (
+                      <Popover open={true}>
+                        <PopoverContent 
+                          className="w-[--radix-popover-trigger-width] p-0 z-50" 
+                          align="start"
+                          onOpenAutoFocus={(e) => e.preventDefault()}
+                        >
                           <Command>
-                            <CommandInput 
-                              placeholder="Buscar exercício..." 
-                              onValueChange={(value) => setSearchTerm(value)}
-                            />
                             <CommandList>
                               <CommandEmpty>
                                 {searching ? "Buscando..." : "Nenhum exercício encontrado."}
@@ -246,7 +247,7 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
                                     key={result.id}
                                     value={result.name}
                                     onSelect={() => selectExercise(exercise.id, result)}
-                                    className="flex items-center gap-2"
+                                    className="flex items-center gap-2 cursor-pointer"
                                   >
                                     {result.gifUrl && (
                                       <img 
@@ -266,7 +267,7 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
                           </Command>
                         </PopoverContent>
                       </Popover>
-                    </div>
+                    )}
                     {exercise.gifUrl && (
                       <div className="mt-2">
                         <img 
