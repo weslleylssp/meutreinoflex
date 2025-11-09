@@ -2,6 +2,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from "@
 import { Button } from "@/components/ui/button";
 import { Exercise } from "@/services/exerciseService";
 import { Target, Dumbbell, Wrench, X } from "lucide-react";
+import { useState, useEffect } from "react";
+import { getMuscleImage } from "@/services/muscleImageService";
 
 interface ExerciseModalProps {
   exercise: Exercise | null;
@@ -10,6 +12,20 @@ interface ExerciseModalProps {
 }
 
 export const ExerciseModal = ({ exercise, open, onOpenChange }: ExerciseModalProps) => {
+  const [muscleImageUrl, setMuscleImageUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (exercise && open) {
+      getMuscleImage(exercise.target, 'FF0000').then(setMuscleImageUrl);
+    }
+    
+    return () => {
+      if (muscleImageUrl) {
+        URL.revokeObjectURL(muscleImageUrl);
+      }
+    };
+  }, [exercise, open]);
+
   if (!exercise) return null;
 
   return (
@@ -20,12 +36,24 @@ export const ExerciseModal = ({ exercise, open, onOpenChange }: ExerciseModalPro
         </DialogHeader>
         
         <div className="space-y-6">
-          <div className="relative aspect-video rounded-lg overflow-hidden bg-accent">
-            <img
-              src={exercise.gifUrl}
-              alt={exercise.name}
-              className="w-full h-full object-contain"
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="relative aspect-video rounded-lg overflow-hidden bg-accent">
+              <img
+                src={exercise.gifUrl}
+                alt={exercise.name}
+                className="w-full h-full object-contain"
+              />
+            </div>
+            
+            {muscleImageUrl && (
+              <div className="relative aspect-video rounded-lg overflow-hidden bg-accent/50 flex items-center justify-center">
+                <img
+                  src={muscleImageUrl}
+                  alt={`Músculos: ${exercise.target}`}
+                  className="w-full h-full object-contain"
+                />
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
