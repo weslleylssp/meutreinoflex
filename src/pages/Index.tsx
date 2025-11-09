@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Plus, Dumbbell, TrendingUp, LogOut, BookTemplate, Share2, Search } from "lucide-react";
+import { Plus, Dumbbell, TrendingUp, LogOut, BookTemplate, Share2, Search, Table2 } from "lucide-react";
 import { WorkoutCard } from "@/components/WorkoutCard";
 import { WorkoutDialog } from "@/components/WorkoutDialog";
 import { TemplatesDialog } from "@/components/TemplatesDialog";
@@ -203,6 +203,14 @@ const Index = () => {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <Button
+                onClick={() => navigate("/exercises-table")}
+                variant="outline"
+                className="gap-2"
+              >
+                <Table2 className="h-5 w-5" />
+                Base de Dados
+              </Button>
               <Button
                 onClick={() => navigate("/exercises")}
                 variant="outline"
