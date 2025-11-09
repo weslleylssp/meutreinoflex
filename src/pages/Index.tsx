@@ -189,47 +189,51 @@ const Index = () => {
       <div className="container mx-auto px-4 py-8">
         <header className="mb-12">
           <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3">
               <div className="p-3 rounded-2xl bg-gradient-primary">
                 <Dumbbell className="h-8 w-8 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="text-4xl md:text-5xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+                <h1 className="text-3xl md:text-5xl font-bold bg-gradient-primary bg-clip-text text-transparent">
                   FitPlan
                 </h1>
-                <p className="text-muted-foreground">
+                <p className="text-sm md:text-base text-muted-foreground">
                   Organize seus treinos e acompanhe seu progresso
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap justify-end">
               <Button
                 onClick={() => navigate("/exercises-table")}
                 variant="outline"
-                className="gap-2"
+                size="sm"
+                className="gap-1 md:gap-2"
               >
-                <Table2 className="h-5 w-5" />
-                Base de Dados
+                <Table2 className="h-4 w-4 md:h-5 md:w-5" />
+                <span className="hidden sm:inline">Base de Dados</span>
+                <span className="sm:hidden">Base</span>
               </Button>
               <Button
                 onClick={() => navigate("/exercises")}
                 variant="outline"
-                className="gap-2"
+                size="sm"
+                className="gap-1 md:gap-2"
               >
-                <Search className="h-5 w-5" />
-                Exercícios
+                <Search className="h-4 w-4 md:h-5 md:w-5" />
+                <span className="hidden sm:inline">Exercícios</span>
               </Button>
               <Button
                 onClick={() => navigate("/history")}
                 variant="outline"
-                className="gap-2"
+                size="sm"
+                className="gap-1 md:gap-2"
               >
-                <TrendingUp className="h-5 w-5" />
-                Histórico
+                <TrendingUp className="h-4 w-4 md:h-5 md:w-5" />
+                <span className="hidden sm:inline">Histórico</span>
               </Button>
               <div className="flex items-center gap-2">
-                <div className="text-right hidden md:block">
-                  <p className="text-sm text-muted-foreground">{userEmail}</p>
+                <div className="text-right hidden lg:block">
+                  <p className="text-xs text-muted-foreground">{userEmail}</p>
                 </div>
                 <Button
                   variant="ghost"
@@ -237,34 +241,34 @@ const Index = () => {
                   onClick={handleLogout}
                   title="Sair"
                 >
-                  <LogOut className="h-5 w-5" />
+                  <LogOut className="h-4 w-4 md:h-5 md:w-5" />
                 </Button>
               </div>
             </div>
           </div>
         </header>
 
-        <div className="mb-8 flex justify-between items-center">
+        <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h2 className="text-2xl font-semibold">Meus Treinos</h2>
-            <p className="text-muted-foreground">
+            <h2 className="text-xl md:text-2xl font-semibold">Meus Treinos</h2>
+            <p className="text-sm text-muted-foreground">
               {workouts.length} {workouts.length === 1 ? "treino" : "treinos"} cadastrados
             </p>
           </div>
-          <div className="flex gap-2">
-            <Button onClick={() => setTemplatesOpen(true)} variant="outline">
-              <BookTemplate className="h-5 w-5 mr-2" />
-              Templates
+          <div className="flex gap-2 flex-wrap">
+            <Button onClick={() => setTemplatesOpen(true)} variant="outline" size="sm" className="gap-1">
+              <BookTemplate className="h-4 w-4" />
+              <span className="hidden sm:inline">Templates</span>
             </Button>
             <Button onClick={() => {
               setSharingWorkoutId(undefined);
               setShareDialogOpen(true);
-            }} variant="outline">
-              <Share2 className="h-4 w-4 mr-2" />
-              Importar
+            }} variant="outline" size="sm" className="gap-1">
+              <Share2 className="h-4 w-4" />
+              <span className="hidden sm:inline">Importar</span>
             </Button>
-            <Button onClick={handleNewWorkout} className="bg-gradient-primary shadow-elevated">
-              <Plus className="h-5 w-5 mr-2" />
+            <Button onClick={handleNewWorkout} size="sm" className="bg-gradient-primary shadow-elevated gap-1">
+              <Plus className="h-4 w-4" />
               Novo Treino
             </Button>
           </div>

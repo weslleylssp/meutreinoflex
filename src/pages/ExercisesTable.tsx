@@ -161,8 +161,8 @@ const ExercisesTable = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-6">
+      <div className="container mx-auto px-4 py-4 md:py-8">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
           <div className="flex items-center gap-3">
             <Button
               onClick={() => navigate("/")}
@@ -172,8 +172,8 @@ const ExercisesTable = () => {
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
-              <h1 className="text-3xl font-bold">Banco de Exercícios</h1>
-              <p className="text-muted-foreground">
+              <h1 className="text-2xl md:text-3xl font-bold">Banco de Exercícios</h1>
+              <p className="text-sm text-muted-foreground">
                 {exercises.length} exercícios disponíveis
               </p>
             </div>
@@ -205,7 +205,7 @@ const ExercisesTable = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>
+            <CardTitle className="text-lg md:text-xl">
               Lista de Exercícios ({filteredExercises.length})
             </CardTitle>
             <CardDescription>
@@ -213,44 +213,75 @@ const ExercisesTable = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="h-[600px]">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Parte do Corpo</TableHead>
-                    <TableHead>Músculo Alvo</TableHead>
-                    <TableHead>Equipamento</TableHead>
-                    <TableHead>Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredExercises.map((exercise) => (
-                    <TableRow key={exercise.id}>
-                      <TableCell className="font-medium">
-                        {exercise.name}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">{exercise.body_part}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{exercise.target}</Badge>
-                      </TableCell>
-                      <TableCell>{exercise.equipment}</TableCell>
-                      <TableCell>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setSelectedExercise(exercise)}
-                        >
-                          Ver Detalhes
-                        </Button>
-                      </TableCell>
+            <div className="hidden md:block">
+              <ScrollArea className="h-[600px]">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>Parte do Corpo</TableHead>
+                      <TableHead>Músculo Alvo</TableHead>
+                      <TableHead>Equipamento</TableHead>
+                      <TableHead>Ações</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </ScrollArea>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredExercises.map((exercise) => (
+                      <TableRow key={exercise.id}>
+                        <TableCell className="font-medium">
+                          {exercise.name}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{exercise.body_part}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{exercise.target}</Badge>
+                        </TableCell>
+                        <TableCell>{exercise.equipment}</TableCell>
+                        <TableCell>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setSelectedExercise(exercise)}
+                          >
+                            Ver Detalhes
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            </div>
+            
+            <div className="md:hidden space-y-3">
+              <ScrollArea className="h-[600px]">
+                {filteredExercises.map((exercise) => (
+                  <Card key={exercise.id} className="mb-3">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base">{exercise.name}</CardTitle>
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        <Badge variant="secondary" className="text-xs">{exercise.body_part}</Badge>
+                        <Badge variant="outline" className="text-xs">{exercise.target}</Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <p className="text-xs text-muted-foreground mb-2">
+                        {exercise.equipment}
+                      </p>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setSelectedExercise(exercise)}
+                        className="w-full"
+                      >
+                        Ver Detalhes
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </ScrollArea>
+            </div>
           </CardContent>
         </Card>
 

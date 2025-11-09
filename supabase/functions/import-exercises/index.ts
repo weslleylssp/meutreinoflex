@@ -29,13 +29,48 @@ serve(async (req) => {
 
     console.log(`Starting import of ${csvData.length} exercises...`);
 
+    // Traduções
+    const bodyPartTranslations: Record<string, string> = {
+      'back': 'Costas', 'cardio': 'Cardio', 'chest': 'Peito',
+      'lower arms': 'Antebraços', 'lower legs': 'Panturrilhas',
+      'neck': 'Pescoço', 'shoulders': 'Ombros', 'upper arms': 'Braços',
+      'upper legs': 'Pernas', 'waist': 'Abdômen',
+    };
+    
+    const equipmentTranslations: Record<string, string> = {
+      'assisted': 'Assistido', 'band': 'Elástico', 'barbell': 'Barra',
+      'body weight': 'Peso Corporal', 'bosu ball': 'Bola Bosu',
+      'cable': 'Cabo', 'dumbbell': 'Haltere', 'elliptical machine': 'Elíptico',
+      'ez barbell': 'Barra EZ', 'hammer': 'Martelo', 'kettlebell': 'Kettlebell',
+      'leverage machine': 'Máquina de Alavanca', 'medicine ball': 'Bola Medicinal',
+      'olympic barbell': 'Barra Olímpica', 'resistance band': 'Faixa de Resistência',
+      'roller': 'Rolo', 'rope': 'Corda', 'skierg machine': 'Máquina SkiErg',
+      'sled machine': 'Máquina de Trenó', 'smith machine': 'Smith Machine',
+      'stability ball': 'Bola de Estabilidade', 'stationary bike': 'Bicicleta Ergométrica',
+      'stepmill machine': 'Máquina Step', 'tire': 'Pneu', 'trap bar': 'Barra Trap',
+      'upper body ergometer': 'Ergômetro Superior', 'weighted': 'Com Peso',
+      'wheel roller': 'Roda',
+    };
+    
+    const targetTranslations: Record<string, string> = {
+      'abs': 'Abdominais', 'adductors': 'Adutores', 'abductors': 'Abdutores',
+      'biceps': 'Bíceps', 'calves': 'Panturrilhas',
+      'cardiovascular system': 'Sistema Cardiovascular', 'delts': 'Deltoides',
+      'forearms': 'Antebraços', 'glutes': 'Glúteos', 'hamstrings': 'Posteriores',
+      'lats': 'Dorsais', 'levator scapulae': 'Elevador da Escápula',
+      'pectorals': 'Peitorais', 'quads': 'Quadríceps',
+      'serratus anterior': 'Serrátil Anterior', 'spine': 'Coluna',
+      'traps': 'Trapézio', 'triceps': 'Tríceps', 'upper back': 'Costas Superior',
+    };
+
     const exercises = csvData.map((row: any) => {
       // Coletar secondary muscles (até 6 colunas possíveis)
       const secondaryMuscles = [];
       for (let i = 0; i <= 5; i++) {
         const muscle = row[`secondaryMuscles/${i}`];
         if (muscle && muscle.trim()) {
-          secondaryMuscles.push(muscle.trim());
+          const translated = targetTranslations[muscle.trim().toLowerCase()] || muscle.trim();
+          secondaryMuscles.push(translated);
         }
       }
 
@@ -48,13 +83,17 @@ serve(async (req) => {
         }
       }
 
+      const bodyPart = row.bodyPart || '';
+      const equipment = row.equipment || '';
+      const target = row.target || '';
+
       return {
         id: row.id,
         name: row.name,
-        body_part: row.bodyPart,
-        equipment: row.equipment,
+        body_part: bodyPartTranslations[bodyPart.toLowerCase()] || bodyPart,
+        equipment: equipmentTranslations[equipment.toLowerCase()] || equipment,
         gif_url: row.gifUrl,
-        target: row.target,
+        target: targetTranslations[target.toLowerCase()] || target,
         secondary_muscles: secondaryMuscles,
         instructions: instructions,
       };
