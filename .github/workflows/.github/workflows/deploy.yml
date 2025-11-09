@@ -2,7 +2,7 @@ name: Deploy Vite App to GitHub Pages
 
 on:
   push:
-    branches: [main]  # ou "master" se for o seu branch padrão
+    branches: [main]  # publica sempre que fizer commit no main
 
 jobs:
   build:
