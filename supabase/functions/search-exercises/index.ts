@@ -83,14 +83,14 @@ serve(async (req) => {
     
     // Map results to match expected format
     const mappedExercises = exercises.map((ex: any) => ({
-      id: ex.id,
-      name: ex.name,
-      target: ex.primaryMuscles?.[0] || ex.target || 'unknown',
-      bodyPart: ex.bodyPart,
-      equipment: ex.equipment,
-      gifUrl: ex.gifUrl,
-      secondaryMuscles: ex.secondaryMuscles || [],
-      instructions: ex.instructions || []
+      id: String(ex.id || ''),
+      name: String(ex.name || ''),
+      target: String(ex.primaryMuscles?.[0] || ex.target || 'unknown'),
+      bodyPart: String(ex.bodyPart || ''),
+      equipment: String(ex.equipment || ''),
+      gifUrl: String(ex.gifUrl || ex.imageUrl || ''),
+      secondaryMuscles: Array.isArray(ex.secondaryMuscles) ? ex.secondaryMuscles.map(String) : [],
+      instructions: Array.isArray(ex.instructions) ? ex.instructions.map(String) : []
     })).slice(0, 50);
 
     return new Response(

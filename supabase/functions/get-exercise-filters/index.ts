@@ -52,7 +52,10 @@ serve(async (req) => {
     }
 
     const result = await response.json();
-    const data = result.data || result;
+    const rawData = result.data || result;
+    
+    // Ensure all values are strings
+    const data = Array.isArray(rawData) ? rawData.map(String) : [];
     
     console.log(`Found ${data.length} ${type} options`);
 
