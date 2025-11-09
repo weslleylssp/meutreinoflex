@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Plus, Dumbbell, TrendingUp, LogOut, BookTemplate, Share2 } from "lucide-react";
+import { Plus, Dumbbell, TrendingUp, LogOut, BookTemplate, Share2, Search } from "lucide-react";
 import { WorkoutCard } from "@/components/WorkoutCard";
 import { WorkoutDialog } from "@/components/WorkoutDialog";
 import { TemplatesDialog } from "@/components/TemplatesDialog";
@@ -204,6 +204,14 @@ const Index = () => {
             </div>
             <div className="flex items-center gap-2">
               <Button
+                onClick={() => navigate("/exercises")}
+                variant="outline"
+                className="gap-2"
+              >
+                <Search className="h-5 w-5" />
+                Exercícios
+              </Button>
+              <Button
                 onClick={() => navigate("/history")}
                 variant="outline"
                 className="gap-2"
@@ -313,21 +321,6 @@ const Index = () => {
         workoutId={sharingWorkoutId}
         onImport={handleImportWorkout}
       />
-
-        <footer className="mt-16 pt-8 border-t text-center text-sm text-muted-foreground">
-          <p>
-            💡 <strong>Dica:</strong> Para adicionar imagens/GIFs dos exercícios, você pode integrar com a{" "}
-            <a
-              href="https://rapidapi.com/justin-WFnsXH_t6/api/exercisedb"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary hover:underline"
-            >
-              ExerciseDB API
-            </a>
-            {" "}que oferece uma base gratuita de mais de 1300 exercícios com GIFs demonstrativos.
-          </p>
-        </footer>
       </div>
     </div>
   );

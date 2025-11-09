@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import WorkoutSession from "./pages/WorkoutSession";
 import WorkoutHistory from "./pages/WorkoutHistory";
+import ExerciseBrowser from "./pages/ExerciseBrowser";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -22,6 +23,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/workout/:id" element={<WorkoutSession />} />
           <Route path="/history" element={<WorkoutHistory />} />
+          <Route path="/exercises" element={<ExerciseBrowser />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
