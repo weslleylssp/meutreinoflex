@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Dumbbell, Edit, Trash2, Play } from "lucide-react";
+import { Dumbbell, Edit, Trash2, Play, Share2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface Exercise {
@@ -18,9 +18,10 @@ interface WorkoutCardProps {
   exercises: Exercise[];
   onEdit: () => void;
   onDelete: () => void;
+  onShare: () => void;
 }
 
-export const WorkoutCard = ({ id, name, exercises, onEdit, onDelete }: WorkoutCardProps) => {
+export const WorkoutCard = ({ id, name, exercises, onEdit, onDelete, onShare }: WorkoutCardProps) => {
   const navigate = useNavigate();
 
   const handleStartWorkout = () => {
@@ -40,6 +41,9 @@ export const WorkoutCard = ({ id, name, exercises, onEdit, onDelete }: WorkoutCa
             </div>
           </div>
           <div className="flex gap-2">
+            <Button variant="ghost" size="icon" onClick={onShare}>
+              <Share2 className="h-4 w-4" />
+            </Button>
             <Button variant="ghost" size="icon" onClick={onEdit}>
               <Edit className="h-4 w-4" />
             </Button>

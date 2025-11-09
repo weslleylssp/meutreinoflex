@@ -45,9 +45,19 @@ serve(async (req) => {
     const exercises = await response.json();
     
     console.log(`Found ${exercises.length} exercises`);
+    
+    // Mapear os resultados para incluir gifUrl corretamente
+    const mappedExercises = exercises.map((ex: any) => ({
+      id: ex.id,
+      name: ex.name,
+      target: ex.target,
+      bodyPart: ex.bodyPart,
+      equipment: ex.equipment,
+      gifUrl: ex.gifUrl // A API retorna gifUrl no formato correto
+    }));
 
     return new Response(
-      JSON.stringify({ exercises }),
+      JSON.stringify({ exercises: mappedExercises }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {

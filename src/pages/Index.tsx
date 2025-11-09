@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Plus, Dumbbell, TrendingUp, LogOut, BookTemplate } from "lucide-react";
+import { Plus, Dumbbell, TrendingUp, LogOut, BookTemplate, Share2 } from "lucide-react";
 import { WorkoutCard } from "@/components/WorkoutCard";
 import { WorkoutDialog } from "@/components/WorkoutDialog";
 import { TemplatesDialog } from "@/components/TemplatesDialog";
+import { ShareWorkoutDialog } from "@/components/ShareWorkoutDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -28,6 +29,8 @@ const Index = () => {
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [sharingWorkoutId, setSharingWorkoutId] = useState<string | undefined>();
   const [editingWorkout, setEditingWorkout] = useState<Workout | undefined>();
   const [userEmail, setUserEmail] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -164,11 +167,21 @@ const Index = () => {
       exercises: template.exercises
     });
     setDialogOpen(true);
+    setTemplatesOpen(false);
   };
 
   const handleNewWorkout = () => {
     setEditingWorkout(undefined);
     setDialogOpen(true);
+  };
+
+  const handleShareWorkout = (workoutId: string) => {
+    setSharingWorkoutId(workoutId);
+    setShareDialogOpen(true);
+  };
+
+  const handleImportWorkout = async () => {
+    await loadWorkouts();
   };
 
   return (
@@ -227,6 +240,13 @@ const Index = () => {
               <BookTemplate className="h-5 w-5 mr-2" />
               Templates
             </Button>
+            <Button onClick={() => {
+              setSharingWorkoutId(undefined);
+              setShareDialogOpen(true);
+            }} variant="outline">
+              <Share2 className="h-4 w-4 mr-2" />
+              Importar
+            </Button>
             <Button onClick={handleNewWorkout} className="bg-gradient-primary shadow-elevated">
               <Plus className="h-5 w-5 mr-2" />
               Novo Treino
@@ -269,6 +289,7 @@ const Index = () => {
                 exercises={workout.exercises}
                 onEdit={() => handleEditWorkout(workout)}
                 onDelete={() => handleDeleteWorkout(workout.id)}
+                onShare={() => handleShareWorkout(workout.id)}
               />
             ))}
           </div>
@@ -281,11 +302,17 @@ const Index = () => {
           onSave={handleSaveWorkout}
         />
 
-        <TemplatesDialog
-          open={templatesOpen}
-          onOpenChange={setTemplatesOpen}
-          onSelectTemplate={handleSelectTemplate}
-        />
+      <TemplatesDialog
+        open={templatesOpen}
+        onOpenChange={setTemplatesOpen}
+        onSelectTemplate={handleSelectTemplate}
+      />
+      <ShareWorkoutDialog
+        open={shareDialogOpen}
+        onOpenChange={setShareDialogOpen}
+        workoutId={sharingWorkoutId}
+        onImport={handleImportWorkout}
+      />
 
         <footer className="mt-16 pt-8 border-t text-center text-sm text-muted-foreground">
           <p>

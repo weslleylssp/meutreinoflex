@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      shared_workouts: {
+        Row: {
+          access_count: number
+          created_at: string
+          created_by: string
+          expires_at: string | null
+          id: string
+          share_code: string
+          workout_id: string
+        }
+        Insert: {
+          access_count?: number
+          created_at?: string
+          created_by: string
+          expires_at?: string | null
+          id?: string
+          share_code: string
+          workout_id: string
+        }
+        Update: {
+          access_count?: number
+          created_at?: string
+          created_by?: string
+          expires_at?: string | null
+          id?: string
+          share_code?: string
+          workout_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shared_workouts_workout_id_fkey"
+            columns: ["workout_id"]
+            isOneToOne: false
+            referencedRelation: "workouts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workout_history: {
         Row: {
           completed_at: string
@@ -115,7 +153,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      generate_share_code: { Args: never; Returns: string }
     }
     Enums: {
       [_ in never]: never
