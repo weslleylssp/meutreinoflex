@@ -19,7 +19,8 @@ export interface ExerciseFilters {
 export const searchExercises = async (
   searchTerm?: string,
   bodyPart?: string,
-  equipment?: string
+  equipment?: string,
+  limit: number = 50
 ): Promise<Exercise[]> => {
   try {
     // First try local database
@@ -37,7 +38,7 @@ export const searchExercises = async (
       query = query.eq('equipment', equipment);
     }
 
-    query = query.limit(50);
+    query = query.limit(limit);
 
     const { data: localData, error: localError } = await query;
 
@@ -70,6 +71,26 @@ export const searchExercises = async (
   } catch (error) {
     console.error('Error searching exercises:', error);
     throw error;
+  }
+};
+
+// Get exercise suggestions for autocomplete (returns just names)
+export const getExerciseSuggestions = async (searchTerm: string): Promise<string[]> => {
+  if (!searchTerm || searchTerm.trim().length < 2) return [];
+  
+  try {
+    const { data, error } = await supabase
+      .from('exercises')
+      .select('name')
+      .ilike('name', `%${searchTerm.trim()}%`)
+      .limit(10);
+
+    if (error) throw error;
+    
+    return data?.map(ex => ex.name) || [];
+  } catch (error) {
+    console.error('Error getting suggestions:', error);
+    return [];
   }
 };
 

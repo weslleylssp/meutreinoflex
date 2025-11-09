@@ -12,41 +12,6 @@ export interface LocalExercise {
   instructions: string[];
 }
 
-export const searchLocalExercises = async (
-  searchTerm?: string,
-  bodyPart?: string,
-  equipment?: string
-): Promise<LocalExercise[]> => {
-  try {
-    let query = supabase.from('exercises').select('*');
-
-    // Apply filters
-    if (searchTerm && searchTerm.trim().length >= 2) {
-      query = query.ilike('name', `%${searchTerm.trim()}%`);
-    }
-    
-    if (bodyPart && bodyPart !== 'all') {
-      query = query.eq('body_part', bodyPart);
-    }
-    
-    if (equipment && equipment !== 'all') {
-      query = query.eq('equipment', equipment);
-    }
-
-    // Limit results
-    query = query.limit(50);
-
-    const { data, error } = await query;
-
-    if (error) throw error;
-
-    return data || [];
-  } catch (error) {
-    console.error('Error searching local exercises:', error);
-    throw error;
-  }
-};
-
 export const getExerciseById = async (id: string): Promise<LocalExercise | null> => {
   try {
     const { data, error } = await supabase
@@ -60,24 +25,6 @@ export const getExerciseById = async (id: string): Promise<LocalExercise | null>
   } catch (error) {
     console.error('Error getting exercise:', error);
     return null;
-  }
-};
-
-export const getLocalExerciseFilters = async (type: 'body_part' | 'equipment'): Promise<string[]> => {
-  try {
-    const { data, error } = await supabase
-      .from('exercises')
-      .select(type)
-      .order(type);
-
-    if (error) throw error;
-
-    // Get unique values
-    const uniqueValues = [...new Set(data?.map(item => item[type]) || [])];
-    return uniqueValues.filter(Boolean);
-  } catch (error) {
-    console.error('Error fetching filters:', error);
-    throw error;
   }
 };
 

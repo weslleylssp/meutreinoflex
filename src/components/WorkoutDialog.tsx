@@ -7,7 +7,7 @@ import { Plus, X, Loader2, Filter } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { workoutSchema, exerciseSchema } from "@/lib/validationSchemas";
-import { searchExercises } from "@/services/exerciseService";
+import { searchExercises, getExerciseSuggestions } from "@/services/exerciseService";
 import {
   Command,
   CommandEmpty,
@@ -59,6 +59,7 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
   
   // Filtros
   const [bodyPartFilter, setBodyPartFilter] = useState<string>("all");
@@ -158,11 +159,18 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
         clearTimeout(debounceTimerRef.current);
       }
       
+      // Get quick suggestions for autocomplete
+      if (value.length >= 2) {
+        getExerciseSuggestions(value).then(setSuggestions);
+      } else {
+        setSuggestions([]);
+      }
+      
       if (value.length >= 2 || bodyPartFilter !== "all" || equipmentFilter !== "all") {
         setSearching(true);
         // Debounce de 700ms
         debounceTimerRef.current = setTimeout(() => {
-          searchExercises(value);
+          searchExercisesFromDB(value);
         }, 700);
       } else {
         setSearchResults([]);
@@ -175,13 +183,13 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
   useEffect(() => {
     if (activeExerciseId) {
       const exercise = exercises.find(ex => ex.id === activeExerciseId);
-      if (exercise) {
-        searchExercises(exercise.name);
+      if (exercise && exercise.name.length >= 2) {
+        searchExercisesFromDB(exercise.name);
       }
     }
   }, [bodyPartFilter, equipmentFilter]);
 
-  const searchExercises = useCallback(async (term: string) => {
+  const searchExercisesFromDB = useCallback(async (term: string) => {
     // Construir chave de cache incluindo filtros
     const cacheKey = `${term.toLowerCase().trim()}_${bodyPartFilter}_${equipmentFilter}`;
     
@@ -391,8 +399,11 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
                         }
                         onFocus={() => {
                           setActiveExerciseId(exercise.id);
+                          if (exercise.name.length >= 2) {
+                            getExerciseSuggestions(exercise.name).then(setSuggestions);
+                          }
                           if (exercise.name.length >= 2 || bodyPartFilter !== "all" || equipmentFilter !== "all") {
-                            searchExercises(exercise.name);
+                            searchExercisesFromDB(exercise.name);
                           }
                         }}
                         onBlur={() => {
@@ -400,10 +411,18 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
                           setTimeout(() => {
                             setActiveExerciseId(null);
                             setShowFilters(false);
+                            setSuggestions([]);
                           }, 200);
                         }}
+                        list={`exercise-suggestions-${exercise.id}`}
                         className="pr-10"
                       />
+                      {/* Datalist for autocomplete suggestions */}
+                      <datalist id={`exercise-suggestions-${exercise.id}`}>
+                        {suggestions.map((suggestion, idx) => (
+                          <option key={idx} value={suggestion} />
+                        ))}
+                      </datalist>
                       {searching && activeExerciseId === exercise.id && (
                         <div className="absolute right-3 top-1/2 -translate-y-1/2">
                           <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
