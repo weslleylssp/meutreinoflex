@@ -82,19 +82,23 @@ serve(async (req) => {
       target: ex.target,
       bodyPart: ex.bodyPart,
       equipment: ex.equipment,
-      gifUrl: ex.gifUrl // A API retorna gifUrl no formato correto
+      // 🔧 Corrigido: constrói o gifUrl manualmente se a API não retornar
+      gifUrl: ex.gifUrl || `https://v2.exercisedb.io/image/${ex.id}.gif`
     }));
-
-    // Aplicar filtros adicionais se necessário (quando bodyPart + equipment são usados juntos)
+    
+    // 🔹 Limitar resultados para evitar respostas gigantes
+    mappedExercises = mappedExercises.slice(0, 50);
+    
+    // 🔹 Aplicar filtros adicionais se necessário (quando bodyPart + equipment são usados juntos)
     if (bodyPart && bodyPart !== 'all' && equipment && equipment !== 'all') {
-      mappedExercises = mappedExercises.filter((ex: any) => 
+      mappedExercises = mappedExercises.filter((ex: any) =>
         ex.equipment.toLowerCase() === equipment.toLowerCase()
       );
     }
-
-    // Aplicar filtro de nome se houver termo de busca e filtros
+    
+    // 🔹 Aplicar filtro de nome se houver termo de busca e filtros
     if (searchTerm && searchTerm.length >= 2 && (bodyPart || equipment)) {
-      mappedExercises = mappedExercises.filter((ex: any) => 
+      mappedExercises = mappedExercises.filter((ex: any) =>
         ex.name.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
