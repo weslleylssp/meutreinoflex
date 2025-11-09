@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Plus, Dumbbell, TrendingUp, LogOut } from "lucide-react";
+import { Plus, Dumbbell, TrendingUp, LogOut, BookTemplate } from "lucide-react";
 import { WorkoutCard } from "@/components/WorkoutCard";
 import { WorkoutDialog } from "@/components/WorkoutDialog";
+import { TemplatesDialog } from "@/components/TemplatesDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -26,11 +27,13 @@ const Index = () => {
   const navigate = useNavigate();
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [templatesOpen, setTemplatesOpen] = useState(false);
   const [editingWorkout, setEditingWorkout] = useState<Workout | undefined>();
   const [userEmail, setUserEmail] = useState<string>("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Verificar autenticação
+    // Verificar autenticação e carregar treinos
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       
@@ -40,6 +43,7 @@ const Index = () => {
       }
       
       setUserEmail(session.user.email || "");
+      await loadWorkouts();
     };
 
     checkAuth();
@@ -55,13 +59,67 @@ const Index = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  const handleSaveWorkout = (workout: Workout) => {
-    if (editingWorkout) {
-      setWorkouts(workouts.map((w) => (w.id === workout.id ? workout : w)));
-    } else {
-      setWorkouts([...workouts, workout]);
+  const loadWorkouts = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('workouts')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      setWorkouts((data || []).map(w => ({
+        ...w,
+        exercises: w.exercises as unknown as Exercise[]
+      })));
+    } catch (error) {
+      toast.error("Erro ao carregar treinos");
+    } finally {
+      setLoading(false);
     }
-    setEditingWorkout(undefined);
+  };
+
+  const handleSaveWorkout = async (workout: Workout) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      if (editingWorkout) {
+        // Update existing workout
+        const { error } = await supabase
+          .from('workouts')
+          .update({
+            name: workout.name,
+            exercises: workout.exercises as any
+          })
+          .eq('id', workout.id)
+          .eq('user_id', user.id);
+
+        if (error) throw error;
+        toast.success("Treino atualizado!");
+      } else {
+        // Create new workout
+        const { error } = await supabase
+          .from('workouts')
+          .insert({
+            name: workout.name,
+            exercises: workout.exercises as any,
+            user_id: user.id
+          });
+
+        if (error) throw error;
+        toast.success("Treino criado!");
+      }
+
+      await loadWorkouts();
+      setEditingWorkout(undefined);
+    } catch (error) {
+      toast.error("Erro ao salvar treino");
+    }
   };
 
   const handleEditWorkout = (workout: Workout) => {
@@ -69,9 +127,24 @@ const Index = () => {
     setDialogOpen(true);
   };
 
-  const handleDeleteWorkout = (id: string) => {
-    setWorkouts(workouts.filter((w) => w.id !== id));
-    toast.success("Treino removido!");
+  const handleDeleteWorkout = async (id: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { error } = await supabase
+        .from('workouts')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      await loadWorkouts();
+      toast.success("Treino removido!");
+    } catch (error) {
+      toast.error("Erro ao remover treino");
+    }
   };
 
   const handleLogout = async () => {
@@ -82,6 +155,15 @@ const Index = () => {
     } catch (error) {
       toast.error("Erro ao fazer logout");
     }
+  };
+
+  const handleSelectTemplate = (template: any) => {
+    setEditingWorkout({
+      id: Math.random().toString(),
+      name: template.name,
+      exercises: template.exercises
+    });
+    setDialogOpen(true);
   };
 
   const handleNewWorkout = () => {
@@ -141,6 +223,10 @@ const Index = () => {
             </p>
           </div>
           <div className="flex gap-2">
+            <Button onClick={() => setTemplatesOpen(true)} variant="outline">
+              <BookTemplate className="h-5 w-5 mr-2" />
+              Templates
+            </Button>
             <Button onClick={handleNewWorkout} className="bg-gradient-primary shadow-elevated">
               <Plus className="h-5 w-5 mr-2" />
               Novo Treino
@@ -148,19 +234,30 @@ const Index = () => {
           </div>
         </div>
 
-        {workouts.length === 0 ? (
+        {loading ? (
+          <div className="text-center py-16">
+            <div className="animate-spin h-12 w-12 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Carregando treinos...</p>
+          </div>
+        ) : workouts.length === 0 ? (
           <div className="text-center py-16">
             <div className="p-6 rounded-full bg-accent inline-block mb-6">
               <Dumbbell className="h-16 w-16 text-accent-foreground" />
             </div>
             <h3 className="text-2xl font-semibold mb-3">Nenhum treino cadastrado</h3>
             <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-              Comece criando seu primeiro treino e organize sua rotina de exercícios
+              Comece criando seu primeiro treino ou escolha um dos nossos templates
             </p>
-            <Button onClick={handleNewWorkout} size="lg" className="bg-gradient-primary shadow-elevated">
-              <Plus className="h-5 w-5 mr-2" />
-              Criar Primeiro Treino
-            </Button>
+            <div className="flex gap-3 justify-center">
+              <Button onClick={() => setTemplatesOpen(true)} size="lg" variant="outline">
+                <BookTemplate className="h-5 w-5 mr-2" />
+                Ver Templates
+              </Button>
+              <Button onClick={handleNewWorkout} size="lg" className="bg-gradient-primary shadow-elevated">
+                <Plus className="h-5 w-5 mr-2" />
+                Criar Primeiro Treino
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -182,6 +279,12 @@ const Index = () => {
           onOpenChange={setDialogOpen}
           workout={editingWorkout}
           onSave={handleSaveWorkout}
+        />
+
+        <TemplatesDialog
+          open={templatesOpen}
+          onOpenChange={setTemplatesOpen}
+          onSelectTemplate={handleSelectTemplate}
         />
 
         <footer className="mt-16 pt-8 border-t text-center text-sm text-muted-foreground">

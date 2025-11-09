@@ -2,9 +2,12 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Calendar, Timer, Weight, Trophy } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ArrowLeft, Calendar, Timer, Weight, Trophy, Download, FileText, FileSpreadsheet } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { ProgressCharts } from "@/components/ProgressCharts";
+import { exportToCSV, exportToPDF } from "@/lib/exportUtils";
 
 interface WorkoutHistoryItem {
   id: string;
@@ -95,6 +98,16 @@ const WorkoutHistory = () => {
     );
   }
 
+  const handleExportCSV = () => {
+    exportToCSV(history);
+    toast.success("Histórico exportado em CSV!");
+  };
+
+  const handleExportPDF = () => {
+    exportToPDF(history);
+    toast.success("Abrindo visualização para impressão/PDF");
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 max-w-6xl">
@@ -104,7 +117,21 @@ const WorkoutHistory = () => {
             Voltar
           </Button>
           
-          <h1 className="text-3xl font-bold mb-2">Histórico de Treinos</h1>
+          <div className="flex items-center justify-between mb-2">
+            <h1 className="text-3xl font-bold">Histórico de Treinos</h1>
+            {history.length > 0 && (
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={handleExportCSV}>
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                  Exportar CSV
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleExportPDF}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Exportar PDF
+                </Button>
+              </div>
+            )}
+          </div>
           <p className="text-muted-foreground">
             Acompanhe seu progresso e veja todos os treinos realizados
           </p>
@@ -153,8 +180,15 @@ const WorkoutHistory = () => {
           </Card>
         </div>
 
-        {/* Workout History List */}
-        {history.length === 0 ? (
+        <Tabs defaultValue="list" className="mb-8">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="list">Lista</TabsTrigger>
+            <TabsTrigger value="charts">Gráficos</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="list" className="mt-6">
+            {/* Workout History List */}
+            {history.length === 0 ? (
           <Card className="bg-gradient-card border-border">
             <CardContent className="pt-12 pb-12">
               <div className="text-center">
@@ -226,6 +260,26 @@ const WorkoutHistory = () => {
             ))}
           </div>
         )}
+          </TabsContent>
+
+          <TabsContent value="charts" className="mt-6">
+            {history.length === 0 ? (
+              <Card className="bg-gradient-card border-border">
+                <CardContent className="pt-12 pb-12">
+                  <div className="text-center">
+                    <Trophy className="h-16 w-16 text-muted-foreground mx-auto mb-4 opacity-50" />
+                    <h3 className="text-xl font-semibold mb-2">Sem dados para mostrar</h3>
+                    <p className="text-muted-foreground mb-6">
+                      Complete alguns treinos para ver os gráficos de progresso
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <ProgressCharts history={history} />
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
