@@ -7,6 +7,7 @@ import { Plus, X, Loader2, Filter } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { workoutSchema, exerciseSchema } from "@/lib/validationSchemas";
+import { searchExercises } from "@/services/exerciseService";
 import {
   Command,
   CommandEmpty,
@@ -236,32 +237,48 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
     setSearchResults([]);
   };
 
-  const handleSave = () => {
-    // Validate workout using zod schema
-    const workoutData = {
-      id: workout?.id || Math.random().toString(),
-      name: name.trim(),
-      exercises: exercises.map(ex => ({
-        ...ex,
-        name: ex.name.trim()
-      })),
-    };
-
-    const validation = workoutSchema.safeParse(workoutData);
-    
-    if (!validation.success) {
-      const errors = validation.error.errors;
-      toast.error(errors[0]?.message || "Please check your workout data");
-      return;
-    }
-
-    onSave(validation.data as Workout);
-    
-    setName("");
-    setExercises([]);
-    onOpenChange(false);
-    toast.success(workout ? "Treino atualizado!" : "Treino criado!");
+  const handleSave = async () => {
+  // Montar objeto do treino
+  const workoutData = {
+    id: workout?.id || Math.random().toString(),
+    name: name.trim(),
+    exercises: exercises.map(ex => ({
+      ...ex,
+      name: ex.name.trim()
+    })),
   };
+
+  // Validar dados com Zod
+  const validation = workoutSchema.safeParse(workoutData);
+  
+  if (!validation.success) {
+    const errors = validation.error.errors;
+    toast.error(errors[0]?.message || "Verifique os dados do treino");
+    return;
+  }
+
+  // ✅ Buscar GIFs automaticamente se estiverem faltando
+  for (const ex of validation.data.exercises) {
+    if (!ex.gifUrl && ex.name) {
+      try {
+        const results = await searchExercises(ex.name);
+        if (results && results.length > 0) {
+          ex.gifUrl = results[0].gifUrl;
+        }
+      } catch (e) {
+        console.warn(`Erro ao buscar GIF para ${ex.name}:`, e);
+      }
+    }
+  }
+
+  // Salvar treino
+  onSave(validation.data as Workout);
+  
+  setName("");
+  setExercises([]);
+  onOpenChange(false);
+  toast.success(workout ? "Treino atualizado!" : "Treino criado!");
+};
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
