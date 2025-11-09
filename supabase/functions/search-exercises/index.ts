@@ -1,9 +1,17 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Input validation schema
+const inputSchema = z.object({
+  searchTerm: z.string().trim().max(100).optional(),
+  bodyPart: z.string().trim().max(50).optional().nullable(),
+  equipment: z.string().trim().max(50).optional().nullable()
+});
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -11,7 +19,18 @@ serve(async (req) => {
   }
 
   try {
-    const { searchTerm, bodyPart, equipment } = await req.json();
+    const body = await req.json();
+    
+    // Validate input
+    const validation = inputSchema.safeParse(body);
+    if (!validation.success) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid input parameters', details: validation.error.errors }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+    
+    const { searchTerm, bodyPart, equipment } = validation.data;
     
     console.log('Searching exercises:', { searchTerm, bodyPart, equipment });
 

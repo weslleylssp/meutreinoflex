@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Plus, X, Loader2, Filter } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { workoutSchema, exerciseSchema } from "@/lib/validationSchemas";
 import {
   Command,
   CommandEmpty,
@@ -126,6 +127,21 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
   };
 
   const updateExercise = (id: string, field: keyof Exercise, value: string | number) => {
+    // Validate numeric inputs
+    if (field === "sets" || field === "reps") {
+      const numValue = typeof value === "string" ? parseInt(value) : value;
+      if (isNaN(numValue) || numValue < 0) return;
+      if (field === "sets" && numValue > 20) return;
+      if (field === "reps" && numValue > 200) return;
+      value = numValue;
+    } else if (field === "weight") {
+      const numValue = typeof value === "string" ? parseFloat(value) : value;
+      if (isNaN(numValue) || numValue < 0 || numValue > 1000) return;
+      value = numValue;
+    } else if (field === "name" && typeof value === "string" && value.length > 100) {
+      return;
+    }
+    
     setExercises(
       exercises.map((ex) =>
         ex.id === id ? { ...ex, [field]: value } : ex
@@ -221,24 +237,25 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
   };
 
   const handleSave = () => {
-    if (!name.trim()) {
-      toast.error("Por favor, insira um nome para o treino");
-      return;
-    }
-    if (exercises.length === 0) {
-      toast.error("Adicione pelo menos um exercício");
-      return;
-    }
-    if (exercises.some(ex => !ex.name.trim())) {
-      toast.error("Todos os exercícios devem ter um nome");
+    // Validate workout using zod schema
+    const workoutData = {
+      id: workout?.id || Math.random().toString(),
+      name: name.trim(),
+      exercises: exercises.map(ex => ({
+        ...ex,
+        name: ex.name.trim()
+      })),
+    };
+
+    const validation = workoutSchema.safeParse(workoutData);
+    
+    if (!validation.success) {
+      const errors = validation.error.errors;
+      toast.error(errors[0]?.message || "Please check your workout data");
       return;
     }
 
-    onSave({
-      id: workout?.id || Math.random().toString(),
-      name,
-      exercises,
-    });
+    onSave(validation.data as Workout);
     
     setName("");
     setExercises([]);

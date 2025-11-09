@@ -63,7 +63,7 @@ export type Database = {
           muscle_groups: string[]
           total_sets: number
           total_weight: number
-          user_id: string | null
+          user_id: string
           workout_name: string
         }
         Insert: {
@@ -76,7 +76,7 @@ export type Database = {
           muscle_groups?: string[]
           total_sets?: number
           total_weight?: number
-          user_id?: string | null
+          user_id: string
           workout_name: string
         }
         Update: {
@@ -89,7 +89,7 @@ export type Database = {
           muscle_groups?: string[]
           total_sets?: number
           total_weight?: number
-          user_id?: string | null
+          user_id?: string
           workout_name?: string
         }
         Relationships: []

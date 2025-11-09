@@ -7,6 +7,7 @@ import { Share2, Copy, Check, Import } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { shareCodeSchema } from "@/lib/validationSchemas";
 
 interface ShareWorkoutDialogProps {
   open: boolean;
@@ -97,18 +98,22 @@ export const ShareWorkoutDialog = ({ open, onOpenChange, workoutId, onImport }: 
   };
 
   const handleImport = async () => {
-    if (!importCode.trim()) {
-      toast.error("Digite um código válido");
+    // Validate share code format
+    const validation = shareCodeSchema.safeParse(importCode.trim().toUpperCase());
+    
+    if (!validation.success) {
+      toast.error("Invalid code format. Must be 6 alphanumeric characters.");
       return;
     }
 
+    const validCode = validation.data;
     setImporting(true);
     try {
       // Buscar treino compartilhado
       const { data: sharedWorkout, error: sharedError } = await supabase
         .from('shared_workouts')
         .select('workout_id')
-        .eq('share_code', importCode.toUpperCase())
+        .eq('share_code', validCode)
         .maybeSingle();
 
       if (sharedError) throw sharedError;
@@ -130,14 +135,14 @@ export const ShareWorkoutDialog = ({ open, onOpenChange, workoutId, onImport }: 
       const { data: currentShared } = await supabase
         .from('shared_workouts')
         .select('access_count')
-        .eq('share_code', importCode.toUpperCase())
+        .eq('share_code', validCode)
         .single();
       
       if (currentShared) {
         await supabase
           .from('shared_workouts')
           .update({ access_count: currentShared.access_count + 1 })
-          .eq('share_code', importCode.toUpperCase());
+          .eq('share_code', validCode);
       }
 
       // Importar treino
