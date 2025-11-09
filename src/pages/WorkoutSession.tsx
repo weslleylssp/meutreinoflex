@@ -101,16 +101,24 @@ const WorkoutSession = () => {
     }));
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast.error("Você precisa estar logado para salvar treinos");
+        return;
+      }
+
       const { error } = await supabase
         .from('workout_history')
         .insert({
           workout_name: workout.name,
           duration: elapsedTime,
           total_weight: totalWeight,
-          muscle_groups: ['Geral'], // Can be enhanced later with specific muscle groups
+          muscle_groups: ['Geral'],
           total_sets: total,
           completed_sets: completed,
           exercises: exerciseDetails,
+          user_id: user.id,
         });
 
       if (error) throw error;

@@ -25,6 +25,7 @@ export type Database = {
           muscle_groups: string[]
           total_sets: number
           total_weight: number
+          user_id: string | null
           workout_name: string
         }
         Insert: {
@@ -37,6 +38,7 @@ export type Database = {
           muscle_groups?: string[]
           total_sets?: number
           total_weight?: number
+          user_id?: string | null
           workout_name: string
         }
         Update: {
@@ -49,6 +51,7 @@ export type Database = {
           muscle_groups?: string[]
           total_sets?: number
           total_weight?: number
+          user_id?: string | null
           workout_name?: string
         }
         Relationships: []

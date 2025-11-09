@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -17,6 +17,9 @@ import {
   Popover,
   PopoverContent,
 } from "@/components/ui/popover";
+
+// Cache para resultados de busca
+const searchCache = new Map<string, any[]>();
 
 interface Exercise {
   id: string;
@@ -46,6 +49,7 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
   const [activeExerciseId, setActiveExerciseId] = useState<string | null>(null);
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (workout) {
@@ -83,13 +87,24 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
       )
     );
     
-    // Se estiver atualizando o nome, fazer busca automática
+    // Se estiver atualizando o nome, fazer busca com debounce
     if (field === "name" && typeof value === "string") {
       setActiveExerciseId(id);
+      
+      // Limpar timer anterior
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+      
       if (value.length >= 2) {
-        searchExercises(value);
+        setSearching(true);
+        // Debounce de 700ms
+        debounceTimerRef.current = setTimeout(() => {
+          searchExercises(value);
+        }, 700);
       } else {
         setSearchResults([]);
+        setSearching(false);
       }
     }
   };
@@ -97,10 +112,19 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
   const searchExercises = useCallback(async (term: string) => {
     if (!term || term.length < 2) {
       setSearchResults([]);
+      setSearching(false);
       return;
     }
 
-    setSearching(true);
+    const normalizedTerm = term.toLowerCase().trim();
+    
+    // Verificar cache primeiro
+    if (searchCache.has(normalizedTerm)) {
+      setSearchResults(searchCache.get(normalizedTerm) || []);
+      setSearching(false);
+      return;
+    }
+
     try {
       const { data, error } = await supabase.functions.invoke('search-exercises', {
         body: { searchTerm: term }
@@ -115,12 +139,15 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
           toast.error("Erro ao buscar exercícios");
         }
         setSearchResults([]);
+        setSearching(false);
         return;
       }
       
-      setSearchResults(data.exercises || []);
+      const results = data.exercises || [];
+      // Armazenar no cache
+      searchCache.set(normalizedTerm, results);
+      setSearchResults(results);
     } catch (error) {
-      console.error('Error searching exercises:', error);
       toast.error("Erro ao buscar exercícios");
       setSearchResults([]);
     } finally {
@@ -211,24 +238,32 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
                 <div className="grid gap-3">
                   <div className="relative">
                     <Label htmlFor={`exercise-name-${exercise.id}`}>Nome</Label>
-                    <Input
-                      id={`exercise-name-${exercise.id}`}
-                      placeholder="Digite para buscar exercícios..."
-                      value={exercise.name}
-                      onChange={(e) =>
-                        updateExercise(exercise.id, "name", e.target.value)
-                      }
-                      onFocus={() => {
-                        if (exercise.name.length >= 2) {
-                          setActiveExerciseId(exercise.id);
-                          searchExercises(exercise.name);
+                    <div className="relative">
+                      <Input
+                        id={`exercise-name-${exercise.id}`}
+                        placeholder="Digite para buscar exercícios..."
+                        value={exercise.name}
+                        onChange={(e) =>
+                          updateExercise(exercise.id, "name", e.target.value)
                         }
-                      }}
-                      onBlur={() => {
-                        // Delay para permitir o clique nos resultados
-                        setTimeout(() => setActiveExerciseId(null), 200);
-                      }}
-                    />
+                        onFocus={() => {
+                          if (exercise.name.length >= 2) {
+                            setActiveExerciseId(exercise.id);
+                            searchExercises(exercise.name);
+                          }
+                        }}
+                        onBlur={() => {
+                          // Delay para permitir o clique nos resultados
+                          setTimeout(() => setActiveExerciseId(null), 200);
+                        }}
+                        className="pr-10"
+                      />
+                      {searching && activeExerciseId === exercise.id && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                        </div>
+                      )}
+                    </div>
                     {activeExerciseId === exercise.id && searchResults.length > 0 && (
                       <Popover open={true}>
                         <PopoverContent 

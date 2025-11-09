@@ -28,15 +28,23 @@ const WorkoutHistory = () => {
 
   const loadHistory = async () => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast.error("Você precisa estar logado");
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('workout_history')
         .select('*')
+        .eq('user_id', user.id)
         .order('completed_at', { ascending: false });
 
       if (error) throw error;
       setHistory(data || []);
     } catch (error) {
-      console.error('Error loading history:', error);
       toast.error("Erro ao carregar histórico");
     } finally {
       setLoading(false);

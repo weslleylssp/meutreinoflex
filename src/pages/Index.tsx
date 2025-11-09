@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Plus, Dumbbell, TrendingUp } from "lucide-react";
+import { Plus, Dumbbell, TrendingUp, LogOut } from "lucide-react";
 import { WorkoutCard } from "@/components/WorkoutCard";
 import { WorkoutDialog } from "@/components/WorkoutDialog";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface Exercise {
@@ -26,6 +27,33 @@ const Index = () => {
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingWorkout, setEditingWorkout] = useState<Workout | undefined>();
+  const [userEmail, setUserEmail] = useState<string>("");
+
+  useEffect(() => {
+    // Verificar autenticação
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        navigate("/auth");
+        return;
+      }
+      
+      setUserEmail(session.user.email || "");
+    };
+
+    checkAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!session) {
+        navigate("/auth");
+      } else {
+        setUserEmail(session.user.email || "");
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
 
   const handleSaveWorkout = (workout: Workout) => {
     if (editingWorkout) {
@@ -44,6 +72,16 @@ const Index = () => {
   const handleDeleteWorkout = (id: string) => {
     setWorkouts(workouts.filter((w) => w.id !== id));
     toast.success("Treino removido!");
+  };
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      toast.success("Logout realizado com sucesso");
+      navigate("/auth");
+    } catch (error) {
+      toast.error("Erro ao fazer logout");
+    }
   };
 
   const handleNewWorkout = () => {
@@ -69,14 +107,29 @@ const Index = () => {
                 </p>
               </div>
             </div>
-            <Button
-              onClick={() => navigate("/history")}
-              variant="outline"
-              className="gap-2"
-            >
-              <TrendingUp className="h-5 w-5" />
-              Histórico
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={() => navigate("/history")}
+                variant="outline"
+                className="gap-2"
+              >
+                <TrendingUp className="h-5 w-5" />
+                Histórico
+              </Button>
+              <div className="flex items-center gap-2">
+                <div className="text-right hidden md:block">
+                  <p className="text-sm text-muted-foreground">{userEmail}</p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleLogout}
+                  title="Sair"
+                >
+                  <LogOut className="h-5 w-5" />
+                </Button>
+              </div>
+            </div>
           </div>
         </header>
 
