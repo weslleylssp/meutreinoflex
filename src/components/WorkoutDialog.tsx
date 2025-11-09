@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, X, Loader2 } from "lucide-react";
+import { Plus, X, Loader2, Filter } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -17,6 +17,13 @@ import {
   Popover,
   PopoverContent,
 } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // Cache para resultados de busca
 const searchCache = new Map<string, any[]>();
@@ -50,6 +57,13 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Filtros
+  const [bodyPartFilter, setBodyPartFilter] = useState<string>("all");
+  const [equipmentFilter, setEquipmentFilter] = useState<string>("all");
+  const [bodyPartOptions, setBodyPartOptions] = useState<string[]>([]);
+  const [equipmentOptions, setEquipmentOptions] = useState<string[]>([]);
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     if (workout) {
@@ -60,6 +74,37 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
       setExercises([]);
     }
   }, [workout, open]);
+
+  // Carregar opções de filtros
+  useEffect(() => {
+    if (open) {
+      loadFilterOptions();
+    }
+  }, [open]);
+
+  const loadFilterOptions = async () => {
+    try {
+      // Carregar bodyParts
+      const { data: bodyPartData } = await supabase.functions.invoke('get-exercise-filters', {
+        body: { type: 'bodyPart' }
+      });
+      
+      if (bodyPartData?.data) {
+        setBodyPartOptions(bodyPartData.data);
+      }
+
+      // Carregar equipment
+      const { data: equipmentData } = await supabase.functions.invoke('get-exercise-filters', {
+        body: { type: 'equipment' }
+      });
+      
+      if (equipmentData?.data) {
+        setEquipmentOptions(equipmentData.data);
+      }
+    } catch (error) {
+      console.error('Error loading filter options:', error);
+    }
+  };
 
 
   const addExercise = () => {
@@ -96,7 +141,7 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
         clearTimeout(debounceTimerRef.current);
       }
       
-      if (value.length >= 2) {
+      if (value.length >= 2 || bodyPartFilter !== "all" || equipmentFilter !== "all") {
         setSearching(true);
         // Debounce de 700ms
         debounceTimerRef.current = setTimeout(() => {
@@ -109,25 +154,34 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
     }
   };
 
-  const searchExercises = useCallback(async (term: string) => {
-    if (!term || term.length < 2) {
-      setSearchResults([]);
-      setSearching(false);
-      return;
+  // Atualizar busca quando filtros mudarem
+  useEffect(() => {
+    if (activeExerciseId) {
+      const exercise = exercises.find(ex => ex.id === activeExerciseId);
+      if (exercise) {
+        searchExercises(exercise.name);
+      }
     }
+  }, [bodyPartFilter, equipmentFilter]);
 
-    const normalizedTerm = term.toLowerCase().trim();
+  const searchExercises = useCallback(async (term: string) => {
+    // Construir chave de cache incluindo filtros
+    const cacheKey = `${term.toLowerCase().trim()}_${bodyPartFilter}_${equipmentFilter}`;
     
     // Verificar cache primeiro
-    if (searchCache.has(normalizedTerm)) {
-      setSearchResults(searchCache.get(normalizedTerm) || []);
+    if (searchCache.has(cacheKey)) {
+      setSearchResults(searchCache.get(cacheKey) || []);
       setSearching(false);
       return;
     }
 
     try {
       const { data, error } = await supabase.functions.invoke('search-exercises', {
-        body: { searchTerm: term }
+        body: { 
+          searchTerm: term,
+          bodyPart: bodyPartFilter !== "all" ? bodyPartFilter : null,
+          equipment: equipmentFilter !== "all" ? equipmentFilter : null
+        }
       });
 
       if (error) throw error;
@@ -145,7 +199,7 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
       
       const results = data.exercises || [];
       // Armazenar no cache
-      searchCache.set(normalizedTerm, results);
+      searchCache.set(cacheKey, results);
       setSearchResults(results);
     } catch (error) {
       toast.error("Erro ao buscar exercícios");
@@ -153,7 +207,7 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
     } finally {
       setSearching(false);
     }
-  }, []);
+  }, [bodyPartFilter, equipmentFilter]);
 
   const selectExercise = (exerciseId: string, apiExercise: any) => {
     const updatedExercises = exercises.map((ex) =>
@@ -237,7 +291,60 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
                 </div>
                 <div className="grid gap-3">
                   <div className="relative">
-                    <Label htmlFor={`exercise-name-${exercise.id}`}>Nome</Label>
+                    <div className="flex items-center justify-between mb-2">
+                      <Label htmlFor={`exercise-name-${exercise.id}`}>Nome</Label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setActiveExerciseId(exercise.id);
+                          setShowFilters(!showFilters);
+                        }}
+                        className="h-7 gap-1"
+                      >
+                        <Filter className="h-3 w-3" />
+                        Filtros
+                      </Button>
+                    </div>
+                    
+                    {showFilters && activeExerciseId === exercise.id && (
+                      <div className="grid grid-cols-2 gap-2 mb-2 p-3 rounded-lg bg-secondary/50">
+                        <div>
+                          <Label className="text-xs">Grupo Muscular</Label>
+                          <Select value={bodyPartFilter} onValueChange={setBodyPartFilter}>
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="Todos" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">Todos</SelectItem>
+                              {bodyPartOptions.map((option) => (
+                                <SelectItem key={option} value={option} className="capitalize">
+                                  {option}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label className="text-xs">Equipamento</Label>
+                          <Select value={equipmentFilter} onValueChange={setEquipmentFilter}>
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="Todos" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">Todos</SelectItem>
+                              {equipmentOptions.map((option) => (
+                                <SelectItem key={option} value={option} className="capitalize">
+                                  {option}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    )}
+                    
                     <div className="relative">
                       <Input
                         id={`exercise-name-${exercise.id}`}
@@ -247,14 +354,17 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
                           updateExercise(exercise.id, "name", e.target.value)
                         }
                         onFocus={() => {
-                          if (exercise.name.length >= 2) {
-                            setActiveExerciseId(exercise.id);
+                          setActiveExerciseId(exercise.id);
+                          if (exercise.name.length >= 2 || bodyPartFilter !== "all" || equipmentFilter !== "all") {
                             searchExercises(exercise.name);
                           }
                         }}
                         onBlur={() => {
                           // Delay para permitir o clique nos resultados
-                          setTimeout(() => setActiveExerciseId(null), 200);
+                          setTimeout(() => {
+                            setActiveExerciseId(null);
+                            setShowFilters(false);
+                          }, 200);
                         }}
                         className="pr-10"
                       />
@@ -291,10 +401,12 @@ export const WorkoutDialog = ({ open, onOpenChange, workout, onSave }: WorkoutDi
                                         className="w-12 h-12 object-cover rounded"
                                       />
                                     )}
-                                    <div className="flex-1">
-                                      <p className="text-sm font-medium">{result.name}</p>
-                                      <p className="text-xs text-muted-foreground capitalize">{result.target}</p>
-                                    </div>
+                                     <div className="flex-1">
+                                       <p className="text-sm font-medium">{result.name}</p>
+                                       <p className="text-xs text-muted-foreground capitalize">
+                                         {result.bodyPart} • {result.equipment}
+                                       </p>
+                                     </div>
                                   </CommandItem>
                                 ))}
                               </CommandGroup>

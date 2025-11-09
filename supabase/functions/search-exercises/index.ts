@@ -11,19 +11,29 @@ serve(async (req) => {
   }
 
   try {
-    const { searchTerm } = await req.json();
+    const { searchTerm, bodyPart, equipment } = await req.json();
     
-    console.log('Searching exercises for:', searchTerm);
+    console.log('Searching exercises:', { searchTerm, bodyPart, equipment });
 
-    const response = await fetch(
-      `https://exercisedb.p.rapidapi.com/exercises/name/${encodeURIComponent(searchTerm)}?limit=20`,
-      {
-        headers: {
-          'X-RapidAPI-Key': Deno.env.get('RAPIDAPI_KEY') || '',
-          'X-RapidAPI-Host': 'exercisedb.p.rapidapi.com'
-        }
+    let url = 'https://exercisedb.p.rapidapi.com/exercises';
+    
+    // Priorizar filtros específicos sobre busca por nome
+    if (bodyPart && bodyPart !== 'all') {
+      url = `https://exercisedb.p.rapidapi.com/exercises/bodyPart/${encodeURIComponent(bodyPart)}?limit=50`;
+    } else if (equipment && equipment !== 'all') {
+      url = `https://exercisedb.p.rapidapi.com/exercises/equipment/${encodeURIComponent(equipment)}?limit=50`;
+    } else if (searchTerm && searchTerm.length >= 2) {
+      url = `https://exercisedb.p.rapidapi.com/exercises/name/${encodeURIComponent(searchTerm)}?limit=20`;
+    } else {
+      url = 'https://exercisedb.p.rapidapi.com/exercises?limit=20';
+    }
+
+    const response = await fetch(url, {
+      headers: {
+        'X-RapidAPI-Key': Deno.env.get('RAPIDAPI_KEY') || '',
+        'X-RapidAPI-Host': 'exercisedb.p.rapidapi.com'
       }
-    );
+    });
 
     if (!response.ok) {
       const errorMsg = `API returned ${response.status}`;
@@ -47,7 +57,7 @@ serve(async (req) => {
     console.log(`Found ${exercises.length} exercises`);
     
     // Mapear os resultados para incluir gifUrl corretamente
-    const mappedExercises = exercises.map((ex: any) => ({
+    let mappedExercises = exercises.map((ex: any) => ({
       id: ex.id,
       name: ex.name,
       target: ex.target,
@@ -55,6 +65,20 @@ serve(async (req) => {
       equipment: ex.equipment,
       gifUrl: ex.gifUrl // A API retorna gifUrl no formato correto
     }));
+
+    // Aplicar filtros adicionais se necessário (quando bodyPart + equipment são usados juntos)
+    if (bodyPart && bodyPart !== 'all' && equipment && equipment !== 'all') {
+      mappedExercises = mappedExercises.filter((ex: any) => 
+        ex.equipment.toLowerCase() === equipment.toLowerCase()
+      );
+    }
+
+    // Aplicar filtro de nome se houver termo de busca e filtros
+    if (searchTerm && searchTerm.length >= 2 && (bodyPart || equipment)) {
+      mappedExercises = mappedExercises.filter((ex: any) => 
+        ex.name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
 
     return new Response(
       JSON.stringify({ exercises: mappedExercises }),
