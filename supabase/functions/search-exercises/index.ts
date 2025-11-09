@@ -34,23 +34,28 @@ serve(async (req) => {
     
     console.log('Searching exercises:', { searchTerm, bodyPart, equipment });
 
-    let url = 'https://exercisedb.p.rapidapi.com/exercises';
+    // Build URL for new API v1
+    let url = 'https://exercisedb-api1.p.rapidapi.com/api/v1/exercises?limit=50';
     
-    // Priorizar filtros específicos sobre busca por nome
-    if (bodyPart && bodyPart !== 'all') {
-      url = `https://exercisedb.p.rapidapi.com/exercises/bodyPart/${encodeURIComponent(bodyPart)}?limit=50`;
-    } else if (equipment && equipment !== 'all') {
-      url = `https://exercisedb.p.rapidapi.com/exercises/equipment/${encodeURIComponent(equipment)}?limit=50`;
-    } else if (searchTerm && searchTerm.length >= 2) {
-      url = `https://exercisedb.p.rapidapi.com/exercises/name/${encodeURIComponent(searchTerm)}?limit=20`;
-    } else {
-      url = 'https://exercisedb.p.rapidapi.com/exercises?limit=20';
+    // Build query parameters
+    const params = new URLSearchParams();
+    if (searchTerm && searchTerm.length >= 2) {
+      params.append('name', searchTerm);
     }
+    if (bodyPart && bodyPart !== 'all') {
+      params.append('bodypart', bodyPart);
+    }
+    if (equipment && equipment !== 'all') {
+      params.append('equipment', equipment);
+    }
+    params.append('limit', '50');
+    
+    url = `https://exercisedb-api1.p.rapidapi.com/api/v1/exercises?${params.toString()}`;
 
     const response = await fetch(url, {
       headers: {
-        'X-RapidAPI-Key': Deno.env.get('RAPIDAPI_KEY') || '',
-        'X-RapidAPI-Host': 'exercisedb.p.rapidapi.com'
+        'x-rapidapi-key': Deno.env.get('RAPIDAPI_KEY') || '',
+        'x-rapidapi-host': 'exercisedb-api1.p.rapidapi.com'
       }
     });
 
@@ -71,37 +76,22 @@ serve(async (req) => {
       throw new Error(errorMsg);
     }
 
-    const exercises = await response.json();
+    const data = await response.json();
+    const exercises = data.data || [];
     
     console.log(`Found ${exercises.length} exercises`);
     
-    // Mapear os resultados para incluir gifUrl corretamente
-    let mappedExercises = exercises.map((ex: any) => ({
+    // Map results to match expected format
+    const mappedExercises = exercises.map((ex: any) => ({
       id: ex.id,
       name: ex.name,
-      target: ex.target,
+      target: ex.primaryMuscles?.[0] || ex.target || 'unknown',
       bodyPart: ex.bodyPart,
       equipment: ex.equipment,
-      // 🔧 Corrigido: constrói o gifUrl manualmente se a API não retornar
-      gifUrl: ex.gifUrl || `https://v2.exercisedb.io/image/${ex.id}.gif`
-    }));
-    
-    // 🔹 Limitar resultados para evitar respostas gigantes
-    mappedExercises = mappedExercises.slice(0, 50);
-    
-    // 🔹 Aplicar filtros adicionais se necessário (quando bodyPart + equipment são usados juntos)
-    if (bodyPart && bodyPart !== 'all' && equipment && equipment !== 'all') {
-      mappedExercises = mappedExercises.filter((ex: any) =>
-        ex.equipment.toLowerCase() === equipment.toLowerCase()
-      );
-    }
-    
-    // 🔹 Aplicar filtro de nome se houver termo de busca e filtros
-    if (searchTerm && searchTerm.length >= 2 && (bodyPart || equipment)) {
-      mappedExercises = mappedExercises.filter((ex: any) =>
-        ex.name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
+      gifUrl: ex.gifUrl,
+      secondaryMuscles: ex.secondaryMuscles || [],
+      instructions: ex.instructions || []
+    })).slice(0, 50);
 
     return new Response(
       JSON.stringify({ exercises: mappedExercises }),

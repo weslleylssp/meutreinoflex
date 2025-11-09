@@ -35,13 +35,13 @@ serve(async (req) => {
     console.log('Fetching filter list:', type);
 
     const endpoint = type === 'bodyPart' 
-      ? 'https://exercisedb.p.rapidapi.com/exercises/bodyPartList'
-      : 'https://exercisedb.p.rapidapi.com/exercises/equipmentList';
+      ? 'https://exercisedb-api1.p.rapidapi.com/api/v1/bodyparts'
+      : 'https://exercisedb-api1.p.rapidapi.com/api/v1/equipments';
 
     const response = await fetch(endpoint, {
       headers: {
-        'X-RapidAPI-Key': Deno.env.get('RAPIDAPI_KEY') || '',
-        'X-RapidAPI-Host': 'exercisedb.p.rapidapi.com'
+        'x-rapidapi-key': Deno.env.get('RAPIDAPI_KEY') || '',
+        'x-rapidapi-host': 'exercisedb-api1.p.rapidapi.com'
       }
     });
 
@@ -51,7 +51,8 @@ serve(async (req) => {
       throw new Error(errorMsg);
     }
 
-    const data = await response.json();
+    const result = await response.json();
+    const data = result.data || result;
     
     console.log(`Found ${data.length} ${type} options`);
 
